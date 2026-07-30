@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.gitignore
+README.md
+.env*
+.pnpm-store
+*.log
+.nyc_output
+coverage
+.nyc_output
+test
+tests

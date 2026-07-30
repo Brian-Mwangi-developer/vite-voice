@@ -1,0 +1,67 @@
+name: Deploy to Registry
+
+on:
+  push:
+    branches:
+      - 'melduo/deploy**'
+      - 'main'
+  workflow_dispatch:
+
+env:
+  REGISTRY_HOST: registry.africastalking.dev/z2k7yqc
+  IMAGE_NAMESPACE: z2k7yqc
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: latest
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY_HOST }}
+        username: ${{ secrets.AT_REGISTRY_USERNAME }}
+        password: ${{ secrets.AT_REGISTRY_PASSWORD }}
+
+    - name: Extract environment variables
+      run: |
+        echo "${{ secrets.PROD_ENV }}" > .env.production
+        echo "Extracting environment variables from PROD_ENV..."
+        # Parse the VITE_BACKEND_URL from the bundled env
+        export $(grep -E '^VITE_BACKEND_URL=' .env.production | xargs)
+        echo "VITE_BACKEND_URL extracted successfully"
+        echo "BACKEND_URL_VALUE=$(grep -E '^VITE_BACKEND_URL=' .env.production | cut -d '=' -f2-)" >> $GITHUB_ENV
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        build-args: |
+          VITE_BACKEND_URL=${{ env.BACKEND_URL_VALUE }}
+        push: true
+        tags: |
+          ${{ env.REGISTRY_HOST }}/${{ env.IMAGE_NAMESPACE }}:latest
+          ${{ env.REGISTRY_HOST }}/${{ env.IMAGE_NAMESPACE }}:${{ github.sha }}
+        labels: |
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.created=${{ github.event.repository.updated_at }}
