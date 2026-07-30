@@ -2,6 +2,9 @@ FROM node:22-alpine AS builder
 
 WORKDIR /app
 
+# Update packages to reduce vulnerabilities
+RUN apk update && apk upgrade
+
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
@@ -18,13 +21,19 @@ ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
 RUN pnpm build
 
 # Production stage
-FROM nginx:1.25.3-alpine AS production
+FROM nginx:1.27.3-alpine AS production
+
+# Apply security updates to alpine base image
+RUN apk update && apk upgrade
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Custom nginx configuration for SPA routing
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Set proper permissions
+RUN chown -R nginx:nginx /usr/share/nginx/html
 
 # Expose port 80
 EXPOSE 80
