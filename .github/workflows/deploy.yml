@@ -43,6 +43,9 @@ jobs:
         username: ${{ secrets.AT_REGISTRY_USERNAME }}
         password: ${{ secrets.AT_REGISTRY_PASSWORD }}
 
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -52,5 +55,3 @@ jobs:
           ${{ env.REGISTRY_HOST }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
         build-args: |
           ENV_CONTENT=${{ secrets.PROD_ENV }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
