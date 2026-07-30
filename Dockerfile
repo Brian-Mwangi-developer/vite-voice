@@ -18,7 +18,7 @@ ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
 RUN pnpm build
 
 # Production stage
-FROM nginx:alpine AS production
+FROM nginx:1.25.3-alpine AS production
 
 # Copy built assets from builder stage
 COPY --from=builder /app/dist /usr/share/nginx/html
