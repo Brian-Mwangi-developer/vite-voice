@@ -1,0 +1,56 @@
+name: Deploy to AT Registry
+
+on:
+  push:
+    branches:
+      - main
+      - 'melduo/deploy**'
+  workflow_dispatch:
+
+env:
+  REGISTRY_HOST: registry.africastalking.dev/z2k7yqc
+  IMAGE_NAME: z2k7yqc
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: latest
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'pnpm'
+
+    - name: Install dependencies
+      run: pnpm install --frozen-lockfile
+
+    - name: Log in to AT Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY_HOST }}
+        username: ${{ secrets.AT_REGISTRY_USERNAME }}
+        password: ${{ secrets.AT_REGISTRY_PASSWORD }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: |
+          ${{ env.REGISTRY_HOST }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        build-args: |
+          ENV_CONTENT=${{ secrets.PROD_ENV }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
